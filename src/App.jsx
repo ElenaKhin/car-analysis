@@ -1,35 +1,70 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import React, { useState, useEffect } from 'react';
+import { Routes, Route } from 'react-router-dom';
+import Dashboard from './pages/Dashboard';
+import HighlightedCars from './pages/HighlightedCars';
+import Navbar from './components/Navbar';
+import Browse from './pages/Browse';
 
-function App() {
-  const [count, setCount] = useState(0)
+const App = () => {
+    const [cars, setCars] = useState([]);
+    const [highlightedCars, setHighlightedCars] = useState([]);
+    const [MMList, setMMList] = useState([]);
 
-  return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
-}
+    useEffect(() => {
+        import('./data/taladrod-cars.min.json').then((module) => {
+            const data = module.default;
+            setCars(data.Cars);
+            setMMList(data.MMList);
+            const storedHighlights = JSON.parse(localStorage.getItem('highlightedCars')) || [];
+            setHighlightedCars(storedHighlights);
+        }).catch((error) => {
+            console.error("Error loading JSON data:", error);
+        });
+    }, []);
 
-export default App
+    const handleHighlightToggle = (car) => {
+        const isHighlighted = highlightedCars.some((c) => c.Cid === car.Cid);
+        const newHighlights = isHighlighted
+            ? highlightedCars.filter((c) => c.Cid !== car.Cid)
+            : [...highlightedCars, car];
+
+        setHighlightedCars(newHighlights);
+        localStorage.setItem('highlightedCars', JSON.stringify(newHighlights));
+    };
+
+    return (
+        <>
+            <Navbar />
+            <div style={{ paddingTop: '64px' }}>
+                <Routes>
+                    <Route
+                        path="/"
+                        element={<Dashboard cars={cars} MMList={MMList} />}
+                    />
+                    <Route
+                        path="/browse"
+                        element={
+                            <Browse
+                                cars={cars}
+                                MMList={MMList}
+                                onHighlightToggle={handleHighlightToggle}
+                                highlightedCars={highlightedCars}
+                            />
+                        }
+                    />
+                    <Route
+                        path="/highlighted"
+                        element={
+                            <HighlightedCars
+                                cars={highlightedCars}
+                                onHighlightToggle={handleHighlightToggle}
+                            />
+                        }
+                    />
+                </Routes>
+            </div>
+        </>
+    );
+};
+
+export default App;
